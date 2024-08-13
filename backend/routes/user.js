@@ -6,7 +6,8 @@ const zod = require("zod");
 const { User, Account } = require("../db");
 const jwt = require("jsonwebtoken");
 const { JWT_SECRET } = require("../config");
-const  { authMiddleware } = require("../middleware");
+const { authMiddleware } = require("../middleware");
+
 
 const signupBody = zod.object({
     username: zod.string().email(),
@@ -98,22 +99,40 @@ const updateBody = zod.object({
     lastName: zod.string().optional(),
 })
 
+console.log("authMiddleware:", authMiddleware);
+console.log("updateBody:", updateBody);
+
 router.put("/", authMiddleware, async (req, res) => {
-    const { success } = updateBody.safeParse(req.body)
+    const { success, data } = updateBody.safeParse(req.body);
+    console.log("Parsed data:", data);
+
     if (!success) {
-        res.status(411).json({
+        return res.status(411).json({
             message: "Error while updating information"
-        })
+        });
     }
 
-    await User.updateOne(req.body, {
-        id: req.userId
-    })
+    try {
+        const result = await User.updateOne({ _id: req.userId }, data);
+        console.log("Update result:", result);
 
-    res.json({
-        message: "Updated successfully"
-    })
-})
+        if (result.nModified === 0) {
+            return res.status(404).json({
+                message: "User not found or no changes detected"
+            });
+        }
+
+        res.json({
+            message: "Updated successfully"
+        });
+    } catch (error) {
+        console.error("Update error:", error);
+        res.status(500).json({
+            message: "Internal Server Error"
+        });
+    }
+});
+
 
 router.get("/bulk", async (req, res) => {
     const filter = req.query.filter || "";

@@ -1,4 +1,6 @@
 const mongoose = require("mongoose");
+const { MONGO_URI } = require('./config');
+
 
 const Schema = mongoose.Schema
 //schema for user
